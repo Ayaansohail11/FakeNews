@@ -17,17 +17,28 @@ function LiveIntel() {
       const data = await response.json()
       
       // Transform backend data to frontend format
-      const transformedArticles = data.articles.map((article, index) => ({
-        id: index + 1,
-        headline: article.title,
-        source: article.source,
-        category: getCategoryFromSource(article.source),
-        timestamp: getTimeAgo(article.fetched_at),
-        duplicateCheck: true,
-        biasStripped: article.bias_flags.includes('NEUTRAL'),
-        content: article.content,
-        url: article.url  // Add URL
-      }))
+      const transformedArticles = data.articles.map((article, index) => {
+        let verdict = 'PENDING'
+        let confidence = null
+        if (article.ml_verdict && article.ml_verdict.includes(':')) {
+          const parts = article.ml_verdict.split(':')
+          verdict = parts[0]
+          confidence = parseFloat(parts[1])
+        }
+        return {
+          id: index + 1,
+          headline: article.title,
+          source: article.source,
+          category: getCategoryFromSource(article.source),
+          timestamp: getTimeAgo(article.fetched_at),
+          duplicateCheck: true,
+          biasStripped: article.bias_flags.includes('NEUTRAL'),
+          content: article.content,
+          url: article.url,
+          verdict,
+          confidence
+        }
+      })
       
       setArticles(transformedArticles)
     } catch (err) {
@@ -283,6 +294,13 @@ function LiveIntel() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
+                  {article.verdict !== 'PENDING' && (
+                    <span className={`text-xs px-2 py-1 rounded-full whitespace-nowrap font-bold ${
+                      article.verdict === 'FAKE' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                    }`}>
+                      {article.verdict === 'FAKE' ? '⚠️' : '✅'} {article.verdict} {article.confidence !== null ? `${(article.confidence * 100).toFixed(0)}%` : ''}
+                    </span>
+                  )}
                   {article.duplicateCheck && (
                     <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full whitespace-nowrap">
                       ✓ Unique

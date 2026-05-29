@@ -46,6 +46,10 @@ except Exception as e:
     print(f"[WARNING] DL model not loaded: {e}")
     dl_predictor = None
 
+# Initialize DB
+from news_scraper import init_db, run_scrape_cycle
+init_db()
+print("[OK] Database initialized")
 print("\n[OK] Backend ready!\n")
 
 @app.route('/', methods=['GET'])
@@ -87,25 +91,27 @@ def predict_ml():
         # Predictions
         results = {}
         predictions = []
-        
+        probs = []
+
         for name, model in models.items():
             pred = model.predict(X)[0]
             prob = model.predict_proba(X)[0] if hasattr(model, 'predict_proba') else [0.5, 0.5]
-            
             results[name] = {
                 'prediction': 'FAKE' if pred == 1 else 'REAL',
                 'probability': float(prob[1])
             }
             predictions.append(pred)
-        
-        # Ensemble
+            if hasattr(model, 'predict_proba'):
+                probs.append(float(prob[1]))
+
         fake_count = sum(predictions)
+        avg_fake_prob = float(np.mean(probs)) if probs else fake_count / len(predictions)
         ensemble_verdict = 'FAKE' if fake_count >= 3 else 'REAL'
-        ensemble_confidence = fake_count / len(predictions) if ensemble_verdict == 'FAKE' else (len(predictions) - fake_count) / len(predictions)
-        
+        ensemble_confidence = round(avg_fake_prob if ensemble_verdict == 'FAKE' else 1.0 - avg_fake_prob, 3)
+
         return jsonify({
             'verdict': ensemble_verdict,
-            'confidence': float(ensemble_confidence),
+            'confidence': ensemble_confidence,
             'models': results,
             'consensus': f'{fake_count}/{len(predictions)} models voted FAKE'
         })
@@ -128,36 +134,31 @@ def predict_dl():
             if result:
                 return jsonify(result)
         
-        # Fallback: Use ML ensemble result for better accuracy
+        # Fallback: Use ML ensemble with real probabilities
         cleaned = clean_text(text)
         X = vectorizer.transform([cleaned])
-        
-        # Get ML predictions
-        ml_predictions = []
+
+        probs = []
         for model in models.values():
-            pred = model.predict(X)[0]
-            ml_predictions.append(pred)
-        
-        # Majority vote from ML models
-        fake_count = sum(ml_predictions)
-        is_fake = fake_count >= 3
-        
-        # Calculate confidence based on consensus strength
-        # If 5/5 agree: 100%, 4/5: 80%, 3/5: 60%
-        if is_fake:
-            confidence = (fake_count / len(ml_predictions)) * 0.9 + 0.1  # 60-100%
-        else:
-            real_count = len(ml_predictions) - fake_count
-            confidence = (real_count / len(ml_predictions)) * 0.9 + 0.1  # 60-100%
-        
-        # Generate attention visualization
+            if hasattr(model, 'predict_proba'):
+                probs.append(float(model.predict_proba(X)[0][1]))
+
+        avg_fake_prob = float(np.mean(probs)) if probs else 0.5
+        is_fake = avg_fake_prob >= 0.5
+        confidence = round(avg_fake_prob if is_fake else 1.0 - avg_fake_prob, 3)
+
+        # Attention from TF-IDF scores
         words = cleaned.split()[:50]
-        suspicious_words = ['breaking', 'secret', 'shocking', 'revealed', 'truth', 'exposed', 'hidden', 'click', 'unbelievable', 'conspiracy', 'cover']
-        
+        feature_names = vectorizer.get_feature_names_out()
+        word_vec = vectorizer.transform([' '.join(words)])
+        score_dict = {feature_names[i]: float(word_vec[0, i]) for i in word_vec.nonzero()[1]}
+        max_score = max(score_dict.values()) if score_dict else 1.0
+
         annotated = []
         for word in words:
-            attention = 0.7 if any(s in word.lower() for s in suspicious_words) else np.random.uniform(0.1, 0.3)
-            annotated.append({'word': word, 'attention': float(attention)})
+            score = score_dict.get(word, 0.0)
+            attention = round(score / max_score * 0.9 + 0.05, 3) if max_score > 0 else 0.1
+            annotated.append({'word': word, 'attention': attention})
         
         return jsonify({
             'verdict': 'FAKE' if is_fake else 'REAL',
@@ -202,18 +203,26 @@ def predict_llm():
         
         client = Groq(api_key=GROQ_KEY)
         
-        prompt = f"""Analyze this article for fake news detection.
-Provide JSON response with:
-- verdict: REAL / FAKE / UNCERTAIN
-- confidence: 0.0-1.0
-- factual_consistency_score: 0.0-1.0
-- sensationalism_score: 0.0-1.0
-- source_credibility_score: 0.0-1.0
-- writing_style_score: 0.0-1.0
-- reasoning: brief explanation
+        prompt = f"""You are an expert fake news detector. Analyze the writing style, tone, and content of this article.
+
+IMPORTANT: Do NOT judge based on whether you know the facts. Judge based on:
+- Writing style (sensational vs journalistic)
+- Presence of credible sources, quotes, specific data
+- Emotional manipulation, clickbait language
+- Logical consistency
+- Whether it reads like professional journalism or propaganda
 
 ARTICLE:
 {text[:2000]}
+
+Provide JSON response with:
+- verdict: REAL / FAKE / UNCERTAIN
+- confidence: 0.0-1.0
+- factual_consistency_score: 0.0-1.0 (based on internal logic)
+- sensationalism_score: 0.0-1.0 (higher = more sensational)
+- source_credibility_score: 0.0-1.0 (based on cited sources in text)
+- writing_style_score: 0.0-1.0 (higher = more professional)
+- reasoning: brief explanation
 
 Respond ONLY with valid JSON."""
         
@@ -249,43 +258,59 @@ Respond ONLY with valid JSON."""
 
 @app.route('/api/live-news', methods=['GET'])
 def get_live_news():
-    """Get cached live news articles"""
+    """Get cached live news articles with real ML predictions"""
     try:
-        from news_scraper import get_cached_articles
         import sqlite3
-        
+        import urllib.parse
+
         limit = request.args.get('limit', 50, type=int)
-        
-        # Get articles with URL from database
+
         con = sqlite3.connect('news_cache.db')
         rows = con.execute(
             "SELECT title, content, source, fetched_at, bias_flags, ml_verdict, url_hash "
             "FROM articles ORDER BY fetched_at DESC LIMIT ?", (limit,)
         ).fetchall()
-        con.close()
-        
+
         result = []
+        updates = []
         for title, content, source, fetched, bias_flags, ml_verdict, url_hash in rows:
-            # Try to extract URL from title (NewsAPI format: "Title - Source")
-            # Or generate search URL
-            search_query = title.replace(' ', '+')
-            article_url = f"https://www.google.com/search?q={search_query}"
-            
+            # Run real ML prediction if still PENDING
+            if ml_verdict == 'PENDING' and models and vectorizer:
+                try:
+                    cleaned = clean_text((title or '') + ' ' + (content or ''))
+                    X = vectorizer.transform([cleaned])
+                    preds = [m.predict(X)[0] for m in models.values()]
+                    probs = []
+                    for m in models.values():
+                        if hasattr(m, 'predict_proba'):
+                            probs.append(float(m.predict_proba(X)[0][1]))
+                    fake_votes = sum(preds)
+                    verdict = 'FAKE' if fake_votes >= 3 else 'REAL'
+                    confidence = round(sum(probs) / len(probs), 3) if probs else round(fake_votes / len(preds), 3)
+                    ml_verdict = f"{verdict}:{confidence}"
+                    updates.append((ml_verdict, url_hash))
+                except Exception:
+                    ml_verdict = 'PENDING'
+
+            search_query = urllib.parse.quote_plus(title or '')
             result.append({
                 'title': title,
-                'content': content[:500],  # First 500 chars
+                'content': (content or '')[:500],
                 'source': source,
                 'fetched_at': fetched,
                 'bias_flags': bias_flags,
                 'ml_verdict': ml_verdict,
-                'url': article_url  # Add URL
+                'url': f"https://www.google.com/search?q={search_query}"
             })
-        
-        return jsonify({
-            'articles': result,
-            'count': len(result)
-        })
-    
+
+        # Save ML verdicts back to DB
+        if updates:
+            con.executemany("UPDATE articles SET ml_verdict=? WHERE url_hash=?", updates)
+            con.commit()
+        con.close()
+
+        return jsonify({'articles': result, 'count': len(result)})
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

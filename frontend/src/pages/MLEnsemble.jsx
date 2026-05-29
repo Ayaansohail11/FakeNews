@@ -179,6 +179,17 @@ function MLEnsemble({ inputText, biasCorrection }) {
           <p className="text-gray-500">Enter text in the sidebar and click analyze</p>
         </div>
       )}
+
+      {/* Dataset Limitation Note */}
+      <div className="mt-6 bg-yellow-900/20 border border-yellow-500/30 rounded-xl p-4">
+        <div className="flex items-start gap-3">
+          <span className="text-xl">⚠️</span>
+          <div>
+            <h4 className="text-yellow-400 font-semibold text-sm mb-1">Dataset Limitation</h4>
+            <p className="text-gray-400 text-xs">Models trained on ISOT dataset (2015–2017 US political news, Reuters style). Out-of-domain articles (tech, science, non-US, post-2017) may be misclassified. Use LLM Ensemble or Agent Swarm for modern news.</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

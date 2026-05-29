@@ -27,7 +27,7 @@ function App() {
     switch(activeTab) {
       case 0: return <MLEnsemble inputText={inputText} biasCorrection={biasCorrection} />
       case 1: return <AttentionBiLSTM inputText={inputText} />
-      case 2: return <LLMEnsemble inputText={inputText} />
+      case 2: return <LLMEnsemble inputText={inputText} setInputText={setInputText} />
       case 3: return <DatasetAudit />
       case 4: return <LiveIntel />
       case 5: return <AgentSwarm inputText={inputText} />
@@ -77,6 +77,7 @@ function App() {
           inputText={inputText}
           setInputText={setInputText}
           setPresetArticle={setPresetArticle}
+          activeTab={activeTab}
         />
 
         {/* Main Content */}

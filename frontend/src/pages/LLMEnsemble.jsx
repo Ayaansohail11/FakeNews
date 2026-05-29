@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-function LLMEnsemble({ inputText }) {
+function LLMEnsemble({ inputText, setInputText }) {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
 
@@ -61,8 +61,40 @@ function LLMEnsemble({ inputText }) {
     </div>
   )
 
+  const sampleArticles = [
+    {
+      label: 'OpenAI GPT-4o (2024)',
+      text: 'OpenAI announced GPT-4o on May 13, 2024, a new flagship model capable of processing text, audio, and images in real time. CEO Sam Altman demonstrated live voice conversations with natural emotional responses. The model is available free to ChatGPT users with higher limits for Plus subscribers.'
+    },
+    {
+      label: 'India Chandrayaan-3 Moon Landing',
+      text: "India's ISRO successfully landed Chandrayaan-3 on the Moon's south pole on August 23, 2023, making India the fourth country to achieve a soft lunar landing. The Vikram lander and Pragyan rover began collecting data on lunar soil composition and seismic activity near the south pole."
+    },
+    {
+      label: 'Gaza Ceasefire Talks (2025)',
+      text: 'Mediators from Qatar, Egypt and the United States brokered a ceasefire agreement between Israel and Hamas in January 2025 after 15 months of conflict in Gaza. The deal included a phased release of hostages held by Hamas in exchange for Palestinian prisoners held by Israel, along with increased humanitarian aid access.'
+    }
+  ]
+
   return (
     <div className="max-w-7xl mx-auto">
+      {/* Sample Modern News */}
+      <div className="mb-6 bg-slate-800/50 border border-green-500/30 rounded-xl p-4">
+        <p className="text-green-400 font-semibold text-sm mb-3">🌐 Modern News Samples (2023-2025)</p>
+        <div className="space-y-2">
+          {sampleArticles.map((a, i) => (
+            <button
+              key={i}
+              onClick={() => setInputText(a.text)}
+              className="w-full text-left px-3 py-2 bg-slate-900/50 hover:bg-slate-700/50 rounded-lg border border-slate-600 hover:border-green-500/50 transition-all"
+            >
+              <p className="text-green-400 text-xs font-semibold">{a.label}</p>
+              <p className="text-gray-400 text-xs line-clamp-1 mt-0.5">{a.text}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Analyze Button */}
       <div className="mb-6">
         <button

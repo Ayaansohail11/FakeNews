@@ -20,7 +20,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [scraper] %(message)s")
 log = logging.getLogger(__name__)
 
-DB_PATH      = "news_cache.db"
+DB_PATH      = os.getenv("DB_PATH", "news_cache.db")
 RETENTION_H  = 72
 NEWSAPI_KEY  = os.getenv("NEWSAPI_KEY", "YOUR_NEWSAPI_KEY")
 REUTERS_RE   = re.compile(r"[A-Z\s]+(Reuters)", re.IGNORECASE)

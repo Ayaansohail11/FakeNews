@@ -1,147 +1,106 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
-function Sidebar({ inputText, setInputText, setPresetArticle }) {
+function Sidebar({ inputText, setInputText, setPresetArticle, activeTab }) {
   const [dragActive, setDragActive] = useState(false)
+  const [liveNews, setLiveNews] = useState([])
 
-  const presets = [
+  useEffect(() => {
+    fetch('http://localhost:5000/api/live-news?limit=15')
+      .then(r => r.json())
+      .then(d => setLiveNews(d.articles || []))
+      .catch(() => {})
+  }, [])
+
+  const mlPresets = [
     {
-      id: 1,
-      title: 'OpenAI GPT-4o Launch (2024) - Real',
-      type: 'real',
-      confidence: '70-85%',
-      text: 'OpenAI announced the launch of GPT-4o on May 13, 2024, featuring improved multimodal capabilities including vision and audio processing. CEO Sam Altman stated the model offers faster response times and enhanced reasoning abilities. The model is now available through OpenAI\'s API for developers worldwide.'
+      id: 1, title: 'US Senate Healthcare Bill (Real)', type: 'real',
+      text: 'WASHINGTON (Reuters) - The United States Senate passed a sweeping healthcare reform bill on Thursday by a vote of 60 to 40. President Donald Trump signed the legislation into law at the White House, calling it a historic victory for the American people. The bill allocates 300 billion dollars for Medicaid expansion over the next five years.'
     },
     {
-      id: 2,
-      title: 'Elon Musk Alien Tech (2024) - Fake',
-      type: 'fake',
-      confidence: '95-100%',
-      text: 'BREAKING: Secret documents leaked from Tesla headquarters reveal that Elon Musk has been using alien technology to power his electric cars! Shocking evidence shows that SpaceX rockets are actually reverse-engineered UFOs. You won\'t believe what scientists are hiding from the public! Click here to discover the truth they don\'t want you to know!'
+      id: 2, title: 'Obama Secret Muslim Agenda (Fake)', type: 'fake',
+      text: 'SHOCKING: Leaked White House documents confirm that Barack Obama secretly funded ISIS during his presidency! Anonymous sources reveal the former president held secret meetings with terrorist leaders in the Oval Office. The mainstream media is covering up this massive scandal. Share this before it gets deleted!'
     },
     {
-      id: 3,
-      title: 'India Chandrayaan-3 (Aug 2023) - Real',
-      type: 'real',
-      confidence: '85-95%',
-      text: 'India\'s space agency ISRO successfully landed its Chandrayaan-3 spacecraft on the Moon\'s south pole on August 23, 2023. The mission made India the fourth country to achieve a soft landing on the lunar surface, following the United States, Russia, and China. Prime Minister Narendra Modi congratulated the ISRO team during a live broadcast from South Africa.'
+      id: 3, title: 'Trump Tax Reform Signed (Real)', type: 'real',
+      text: 'WASHINGTON (Reuters) - President Donald Trump signed the Tax Cuts and Jobs Act into law on Friday, delivering the largest overhaul of the United States tax code in three decades. The legislation cuts the corporate tax rate from 35 percent to 21 percent and reduces individual income tax rates across most brackets.'
     },
     {
-      id: 4,
-      title: 'COVID Vaccine 5G Chips (2024) - Fake',
-      type: 'fake',
-      confidence: '95-100%',
-      text: 'URGENT WARNING: New evidence proves that COVID-19 vaccines contain secret 5G microchips designed to track and control the population! Whistleblowers reveal shocking truth about Bill Gates\' master plan. Doctors are being silenced for speaking out! This is the biggest cover-up in human history. Wake up sheeple! Share this everywhere before Big Tech censors it!'
+      id: 4, title: 'Hillary Clinton Arrested (Fake)', type: 'fake',
+      text: 'BREAKING: Hillary Clinton has been arrested by FBI agents at her New York home early this morning! Sources confirm she will face charges related to her email server and the Clinton Foundation scandal. The deep state is finally being exposed. Donald Trump tweeted that justice is being served. This is the moment patriots have been waiting for!'
     },
     {
-      id: 5,
-      title: 'Taylor Swift Eras Tour (2024) - Real',
-      type: 'real',
-      confidence: '70-85%',
-      text: 'Taylor Swift\'s Eras Tour has generated significant economic impact across cities worldwide, according to a report by the Federal Reserve Bank. The tour, which began in March 2023, has contributed an estimated $5 billion to the U.S. economy. Hotels, restaurants, and local businesses in tour cities reported substantial revenue increases during concert weekends.'
+      id: 5, title: 'FBI Investigates Russia Ties (Real)', type: 'real',
+      text: 'WASHINGTON (Reuters) - The Federal Bureau of Investigation confirmed on Monday that it is conducting a counterintelligence investigation into Russian interference in the 2016 United States presidential election. FBI Director James Comey told the House Intelligence Committee that the investigation includes examining potential links between Trump campaign associates and the Russian government.'
     },
     {
-      id: 6,
-      title: 'Israel-Hamas Conflict (Oct 2023) - Real',
-      type: 'real',
-      confidence: '85-95%',
-      text: 'The United Nations Security Council held an emergency meeting on October 10, 2023, to address the escalating conflict between Israel and Hamas. According to reports from Reuters and Associated Press, the violence began on October 7 following a surprise attack by Hamas militants. International leaders including U.S. President Joe Biden and UK Prime Minister Rishi Sunak issued statements calling for de-escalation.'
-    },
-    {
-      id: 7,
-      title: 'Flat Earth NASA Conspiracy - Fake',
-      type: 'fake',
-      confidence: '95-100%',
-      text: 'FINALLY EXPOSED: NASA admits Earth is actually flat! Secret footage leaked from International Space Station proves the globe is a lie. All those satellite images are CGI fakes created by Hollywood. Pilots and sailors have known the truth for years but were forced to stay silent. The Antarctic ice wall surrounds our flat world and the government guards it with military!'
-    },
-    {
-      id: 8,
-      title: 'Google Gemini AI (Dec 2023) - Real',
-      type: 'real',
-      confidence: '75-90%',
-      text: 'Google announced the launch of Gemini, its most capable AI model, on December 6, 2023. According to Google CEO Sundar Pichai, Gemini represents a significant advancement in multimodal AI capabilities. The model comes in three sizes: Ultra, Pro, and Nano, designed for different use cases from data centers to mobile devices.'
-    },
-    {
-      id: 9,
-      title: '5G Towers Cause Cancer (2024) - Fake',
-      type: 'fake',
-      confidence: '95-100%',
-      text: 'BREAKING DISCOVERY: Scientists finally admit that 5G towers are causing cancer and brain damage! Thousands of people are getting sick but the government is hiding the truth. Cell phone companies are paying off doctors to keep quiet. Your family is in danger RIGHT NOW! This is worse than anyone imagined. The radiation is 100 times stronger than they claim!'
-    },
-    {
-      id: 10,
-      title: 'Argentina Javier Milei (Nov 2023) - Real',
-      type: 'real',
-      confidence: '85-95%',
-      text: 'Javier Milei won Argentina\'s presidential election on November 19, 2023, defeating economy minister Sergio Massa in a runoff vote. The libertarian economist campaigned on promises of radical economic reforms, including dollarizing the economy and shutting down the central bank. International observers confirmed the election results as free and fair.'
-    },
-    {
-      id: 11,
-      title: 'Weather Report (Neutral) - Uncertain',
-      type: 'uncertain',
-      confidence: '50-60%',
-      text: 'The National Weather Service reported that temperatures in New York City reached 75 degrees Fahrenheit on Tuesday. Meteorologists predict partly cloudy conditions for the remainder of the week. No severe weather warnings are currently in effect for the region.'
-    },
-    {
-      id: 12,
-      title: 'AI Writes Own Code (Satire) - Medium',
-      type: 'satire',
-      confidence: '60-80%',
-      text: 'Local AI Model Refuses to Debug Own Code, Cites "Creative Differences" with Developer. "I wrote it perfectly the first time," claims GPT-5, which has been stuck in an infinite loop for three days. The developer reports the AI has started responding to all debugging requests with "Have you tried turning it off and on again?"'
+      id: 6, title: 'George Soros Controls Media (Fake)', type: 'fake',
+      text: 'EXPOSED: Billionaire George Soros has been secretly paying CNN, MSNBC and New York Times journalists to spread anti-Trump propaganda! Internal documents leaked by a whistleblower reveal a 50 million dollar fund used to control American news coverage. The globalist agenda is being exposed. Mainstream media will never report this truth!'
     }
   ]
+
+  const llmPresets = [
+    {
+      id: 1, title: 'OpenAI GPT-4o Launch (2024)', type: 'real',
+      text: 'OpenAI announced GPT-4o on May 13, 2024, a new flagship model capable of processing text, audio, and images in real time. CEO Sam Altman demonstrated live voice conversations with natural emotional responses. The model is available free to ChatGPT users with higher limits for Plus subscribers.'
+    },
+    {
+      id: 2, title: 'Chandrayaan-3 Moon Landing (2023)', type: 'real',
+      text: "India's ISRO successfully landed Chandrayaan-3 on the Moon's south pole on August 23, 2023, making India the fourth country to achieve a soft lunar landing. The Vikram lander and Pragyan rover began collecting data on lunar soil composition and seismic activity near the south pole."
+    },
+    {
+      id: 3, title: 'Gaza Ceasefire Deal (2025)', type: 'real',
+      text: 'Mediators from Qatar, Egypt and the United States brokered a ceasefire agreement between Israel and Hamas in January 2025 after 15 months of conflict in Gaza. The deal included a phased release of hostages held by Hamas in exchange for Palestinian prisoners, along with increased humanitarian aid access.'
+    },
+    {
+      id: 4, title: 'AI 5G Mind Control (Fake)', type: 'fake',
+      text: 'URGENT: Whistleblowers confirm that ChatGPT is being used by globalists to beam mind control signals through 5G towers! Secret documents show Bill Gates and George Soros funded the project to enslave humanity. Doctors are being silenced! Share this before Big Tech deletes it forever!'
+    },
+    {
+      id: 5, title: 'Tesla Robotaxi Unveiled (2024)', type: 'real',
+      text: 'Tesla unveiled its Robotaxi, called Cybercab, at a special event in October 2024. CEO Elon Musk announced the fully autonomous vehicle will have no steering wheel or pedals and is expected to enter production before 2027. The company also showcased its Robovan capable of carrying up to 20 passengers.'
+    },
+    {
+      id: 6, title: 'WHO Hides New Pandemic (Fake)', type: 'fake',
+      text: 'BREAKING: The World Health Organization has secretly declared a new pandemic but is hiding it from the public! Anonymous insiders reveal a deadly virus has already killed thousands in underground facilities. Governments are preparing mass lockdowns. Stock up on supplies NOW before the mainstream media admits the truth!'
+    }
+  ]
+
+  const isLLMTab = activeTab === 2
+  const isSwarmTab = activeTab === 5
+
+  const presets = isLLMTab || isSwarmTab ? llmPresets : mlPresets
+  const presetLabel = isLLMTab || isSwarmTab ? '🌐 Modern News Test Cases (2023-2025)' : '🗞️ Test Cases (ISOT Dataset Style)'
 
   const handleDrag = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
-    } else if (e.type === "dragleave") {
-      setDragActive(false)
-    }
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true)
+    else if (e.type === 'dragleave') setDragActive(false)
   }
 
   const handleDrop = (e) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0])
-    }
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0])
   }
 
-  const handleFile = (file) => {
-    alert('OCR processing: ' + file.name)
-  }
+  const handleFile = (file) => alert('OCR processing: ' + file.name)
 
   const getPresetClass = (type) => {
     if (type === 'real') return 'border-green-500/50 bg-green-900/20 hover:bg-green-900/40 hover:border-green-500'
     if (type === 'fake') return 'border-red-500/50 bg-red-900/20 hover:bg-red-900/40 hover:border-red-500'
-    if (type === 'uncertain') return 'border-gray-500/50 bg-gray-900/20 hover:bg-gray-900/40 hover:border-gray-500'
-    return 'border-yellow-500/50 bg-yellow-900/20 hover:bg-yellow-900/40 hover:border-yellow-500'
+    return 'border-gray-500/50 bg-gray-900/20 hover:bg-gray-900/40 hover:border-gray-500'
   }
 
-  const getPresetIconClass = (type) => {
-    if (type === 'real') return 'text-green-400'
-    if (type === 'fake') return 'text-red-400'
-    if (type === 'uncertain') return 'text-gray-400'
-    return 'text-yellow-400'
-  }
-
-  const getPresetIcon = (type) => {
-    if (type === 'real') return '✓'
-    if (type === 'fake') return '⚠'
-    if (type === 'uncertain') return '?'
-    return '😄'
-  }
+  const getPresetIcon = (type) => type === 'real' ? '✓' : '⚠'
+  const getPresetIconClass = (type) => type === 'real' ? 'text-green-400' : 'text-red-400'
 
   return (
     <div className="w-96 bg-slate-800/50 border-r border-cyan-500/30 p-6 overflow-y-auto h-[calc(100vh-180px)]">
       {/* Input Text Area */}
       <div className="mb-6">
-        <label className="block text-cyan-400 font-semibold mb-2 text-sm">
-          Input News Article
-        </label>
+        <label className="block text-cyan-400 font-semibold mb-2 text-sm">Input News Article</label>
         <textarea
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
@@ -152,9 +111,7 @@ function Sidebar({ inputText, setInputText, setPresetArticle }) {
 
       {/* Preset Selector */}
       <div className="mb-6">
-        <label className="block text-cyan-400 font-semibold mb-3 text-sm">
-          Test Cases (Varying Confidence)
-        </label>
+        <label className="block text-cyan-400 font-semibold mb-3 text-sm">{presetLabel}</label>
         <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
           {presets.map(preset => (
             <button
@@ -162,14 +119,11 @@ function Sidebar({ inputText, setInputText, setPresetArticle }) {
               onClick={() => setInputText(preset.text)}
               className={`w-full p-3 rounded-lg border-2 transition-all text-left ${getPresetClass(preset.type)}`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${getPresetIconClass(preset.type)}`}>
-                    {getPresetIcon(preset.type)}
-                  </span>
-                  <span className="text-white font-semibold text-xs">{preset.title}</span>
-                </div>
-                <span className="text-cyan-400 text-[10px] font-mono">{preset.confidence}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-xs font-bold ${getPresetIconClass(preset.type)}`}>
+                  {getPresetIcon(preset.type)}
+                </span>
+                <span className="text-white font-semibold text-xs">{preset.title}</span>
               </div>
               <p className="text-gray-400 text-[11px] line-clamp-2">{preset.text}</p>
             </button>
@@ -179,14 +133,9 @@ function Sidebar({ inputText, setInputText, setPresetArticle }) {
 
       {/* OCR Uploader */}
       <div className="mb-6">
-        <label className="block text-cyan-400 font-semibold mb-3 text-sm">
-          OCR Image Upload
-        </label>
+        <label className="block text-cyan-400 font-semibold mb-3 text-sm">OCR Image Upload</label>
         <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
+          onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
           className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${dragActive ? 'border-cyan-500 bg-cyan-900/20' : 'border-cyan-500/30 bg-slate-900/30 hover:border-cyan-500/50'}`}
         >
           <svg className="w-12 h-12 mx-auto mb-3 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,6 +149,40 @@ function Sidebar({ inputText, setInputText, setPresetArticle }) {
           </label>
         </div>
       </div>
+
+      {/* Live News Section */}
+      {liveNews.length > 0 && (
+        <div className="mb-6">
+          <label className="block text-cyan-400 font-semibold mb-3 text-sm">🔴 Live News (Click to Analyze)</label>
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+            {liveNews.map((article, idx) => {
+              let verdict = null, confidence = null
+              if (article.ml_verdict && article.ml_verdict.includes(':')) {
+                const parts = article.ml_verdict.split(':')
+                verdict = parts[0]
+                confidence = parseFloat(parts[1])
+              }
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setInputText(article.content || article.title)}
+                  className="w-full p-3 rounded-lg border border-slate-600 bg-slate-900/50 hover:bg-slate-700/50 hover:border-cyan-500/50 transition-all text-left"
+                >
+                  <p className="text-white text-xs font-semibold line-clamp-2 mb-1">{article.title}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 text-[10px]">{article.source}</span>
+                    {verdict && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${verdict === 'FAKE' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                        {verdict} {confidence ? `${(confidence * 100).toFixed(0)}%` : ''}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="bg-slate-900/50 border border-cyan-500/30 rounded-lg p-4">

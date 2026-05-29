@@ -13,14 +13,14 @@ import feedparser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 
 load_dotenv()  # Load .env file
 
 log = logging.getLogger(__name__)
 
-GEMINI_KEY = os.getenv("GOOGLE_GENAI_KEY", "YOUR_GEMINI_KEY")
+GROQ_KEY = os.getenv("GROQ_API_KEY", "")
 
 # ── Domain Registry ────────────────────────────────────────────────────────
 CREDIBLE_DOMAINS = {
@@ -146,16 +146,15 @@ def _agent_search(domain_key: str, keywords: list[str]) -> dict:
     }
 
 
-# ── Coordinator (Gemini 2.5 Flash) ────────────────────────────────────────
+# ── Coordinator (Groq - gemma2-9b-it) ────────────────────────────────────
 def _coordinator_verdict(article_text: str, keywords: list[str],
                           agent_results: list[dict]) -> dict:
-    if not GEMINI_KEY or GEMINI_KEY == "YOUR_GEMINI_KEY":
-        log.warning("Gemini API key not configured, using fallback verdict")
+    if not GROQ_KEY:
+        log.warning("GROQ_API_KEY not configured, using fallback verdict")
         return _fallback_verdict(agent_results)
 
     try:
-        genai.configure(api_key=GEMINI_KEY)
-        model = genai.GenerativeModel("gemini-1.5-pro")  # Changed to pro version
+        client = Groq(api_key=GROQ_KEY)
 
         evidence_summary = []
         for r in agent_results:
@@ -183,9 +182,13 @@ Based on the evidence, provide a JSON response with:
 
 Respond ONLY with valid JSON."""
 
-        resp = model.generate_content(prompt)
-        text = resp.text.strip()
-        # Extract JSON block
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=500
+        )
+        text = resp.choices[0].message.content.strip()
         match = re.search(r"\{.*\}", text, re.DOTALL)
         if match:
             import json
