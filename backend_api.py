@@ -47,7 +47,7 @@ except Exception as e:
     dl_predictor = None
 
 # Initialize DB
-from news_scraper import init_db, run_scrape_cycle
+from news_scraper import init_db
 init_db()
 print("[OK] Database initialized")
 print("\n[OK] Backend ready!\n")
@@ -265,7 +265,8 @@ def get_live_news():
 
         limit = request.args.get('limit', 50, type=int)
 
-        con = sqlite3.connect('news_cache.db')
+        db_path = os.getenv('DB_PATH', 'news_cache.db')
+        con = sqlite3.connect(db_path)
         rows = con.execute(
             "SELECT title, content, source, fetched_at, bias_flags, ml_verdict, url_hash "
             "FROM articles ORDER BY fetched_at DESC LIMIT ?", (limit,)
