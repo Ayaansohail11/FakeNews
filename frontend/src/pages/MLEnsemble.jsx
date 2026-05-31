@@ -21,7 +21,7 @@ function MLEnsemble({ inputText, biasCorrection }) {
 
     setLoading(true)
     try {
-      const response = await axios.post('http://localhost:5000/api/predict/ml', {
+      const response = await axios.post('https://ayaans123-fakenewsspace.hf.space/api/predict/ml', {
         text: inputText
       })
       setResults(response.data)

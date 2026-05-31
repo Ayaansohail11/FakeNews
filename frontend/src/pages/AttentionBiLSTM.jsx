@@ -13,7 +13,7 @@ function AttentionBiLSTM({ inputText }) {
 
     setLoading(true)
     try {
-      const response = await axios.post('http://localhost:5000/api/predict/dl', {
+      const response = await axios.post('https://ayaans123-fakenewsspace.hf.space/api/predict/dl', {
         text: inputText
       })
       setResults(response.data)

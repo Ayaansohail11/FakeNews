@@ -10,7 +10,7 @@ function LiveIntel() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('http://localhost:5000/api/live-news?limit=20')
+      const response = await fetch('https://ayaans123-fakenewsspace.hf.space/api/live-news?limit=20')
       if (!response.ok) {
         throw new Error('Failed to fetch articles')
       }

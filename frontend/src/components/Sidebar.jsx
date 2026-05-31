@@ -5,7 +5,7 @@ function Sidebar({ inputText, setInputText, setPresetArticle, activeTab }) {
   const [liveNews, setLiveNews] = useState([])
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/live-news?limit=15')
+    fetch('https://ayaans123-fakenewsspace.hf.space/api/live-news?limit=15')
       .then(r => r.json())
       .then(d => setLiveNews(d.articles || []))
       .catch(() => {})
