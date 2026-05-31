@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-function Sidebar({ inputText, setInputText, setPresetArticle, activeTab }) {
+function Sidebar({ inputText, setInputText, setPresetArticle, activeTab, onClose }) {
   const [dragActive, setDragActive] = useState(false)
   const [liveNews, setLiveNews] = useState([])
 
@@ -97,7 +97,16 @@ function Sidebar({ inputText, setInputText, setPresetArticle, activeTab }) {
   const getPresetIconClass = (type) => type === 'real' ? 'text-green-400' : 'text-red-400'
 
   return (
-    <div className="w-96 bg-slate-800/50 border-r border-cyan-500/30 p-6 overflow-y-auto h-[calc(100vh-180px)]">
+    <div className="w-80 lg:w-96 bg-slate-800/50 border-r border-cyan-500/30 p-4 overflow-y-auto h-screen lg:h-[calc(100vh-180px)]">
+      {/* Mobile close button */}
+      <div className="flex items-center justify-between mb-4 lg:hidden">
+        <span className="text-cyan-400 font-bold text-sm">Input Panel</span>
+        <button onClick={onClose} className="text-gray-400 hover:text-white p-1">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
       {/* Input Text Area */}
       <div className="mb-6">
         <label className="block text-cyan-400 font-semibold mb-2 text-sm">Input News Article</label>

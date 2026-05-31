@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
+import API_BASE from '../config'
 
 function AttentionBiLSTM({ inputText }) {
   const [loading, setLoading] = useState(false)
@@ -13,13 +14,13 @@ function AttentionBiLSTM({ inputText }) {
 
     setLoading(true)
     try {
-      const response = await axios.post('https://ayaans123-fakenewsspace.hf.space/api/predict/dl', {
+      const response = await axios.post(`${API_BASE}/api/predict/dl`, {
         text: inputText
       })
       setResults(response.data)
     } catch (error) {
       console.error('Error:', error)
-      alert('Error connecting to backend. Make sure backend is running on port 5000.')
+      alert('Error connecting to backend.')
     } finally {
       setLoading(false)
     }

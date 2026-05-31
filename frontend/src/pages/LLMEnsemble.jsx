@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import API_BASE from '../config'
 
 function LLMEnsemble({ inputText, setInputText }) {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
+  const [error, setError] = useState(null)
 
   const analyzeLLM = async () => {
     if (!inputText || inputText.trim().length === 0) {
@@ -11,20 +13,21 @@ function LLMEnsemble({ inputText, setInputText }) {
     }
 
     setLoading(true)
+    setError(null)
     try {
-      const response = await fetch('https://ayaans123-fakenewsspace.hf.space/api/predict/llm', {
+      const response = await fetch(`${API_BASE}/api/predict/llm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: inputText })
       })
 
-      if (!response.ok) {
-        throw new Error('API request failed')
-      }
-
       const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'API request failed')
+        return
+      }
       
-      // Transform backend response to match frontend format
       setResults({
         llama: {
           verdict: data.verdict || 'UNCERTAIN',
@@ -38,9 +41,9 @@ function LLMEnsemble({ inputText, setInputText }) {
           }
         }
       })
-    } catch (error) {
-      console.error('LLM API Error:', error)
-      alert('Failed to analyze with LLM. Make sure backend is running on port 5000.')
+    } catch (err) {
+      console.error('LLM API Error:', err)
+      setError('Network error - make sure backend is running')
     } finally {
       setLoading(false)
     }
@@ -94,6 +97,15 @@ function LLMEnsemble({ inputText, setInputText }) {
           ))}
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
+          <p className="text-red-400 text-sm font-semibold">❌ Error: {error}</p>
+          {error.includes('GROQ_API_KEY') && (
+            <p className="text-gray-400 text-xs mt-1">Set GROQ_API_KEY in your .env file. Get key at console.groq.com</p>
+          )}
+        </div>
+      )}
 
       {/* Analyze Button */}
       <div className="mb-6">

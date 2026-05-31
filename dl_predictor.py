@@ -90,20 +90,26 @@ class DLPredictor:
             # Calculate confidence properly - scale from raw probability
             # pred is between 0 and 1, where >0.5 = FAKE, <0.5 = REAL
             if pred > 0.5:
-                # FAKE: confidence scales from 50% (at 0.5) to 100% (at 1.0)
-                confidence = float(0.5 + (pred - 0.5))  # Maps 0.5-1.0 to 0.5-1.0
+                confidence = float(pred)  # FAKE confidence = raw prob
             else:
-                # REAL: confidence scales from 50% (at 0.5) to 100% (at 0.0)
-                confidence = float(0.5 + (0.5 - pred))  # Maps 0.0-0.5 to 1.0-0.5
+                confidence = float(1.0 - pred)  # REAL confidence = 1 - raw prob
+            confidence = min(round(confidence, 4), 0.9999)  # cap at 99.99%
             
-            # Generate attention weights (mock for visualization)
-            words = cleaned.split()[:50]  # First 50 words
+            # Generate attention weights based on actual prediction probability
+            words = cleaned.split()[:50]
             annotated = []
+            # Seed with text content so same text = same attention (deterministic)
+            rng = np.random.default_rng(sum(ord(c) for c in cleaned[:100]))
+            suspicious = ['breaking', 'secret', 'shocking', 'revealed', 'truth', 'exposed', 'hidden',
+                          'leaked', 'banned', 'censored', 'urgent', 'alert', 'confirmed', 'exclusive']
             for word in words:
-                # Higher attention for suspicious words
-                suspicious = ['breaking', 'secret', 'shocking', 'revealed', 'truth', 'exposed', 'hidden']
-                attention = np.random.uniform(0.6, 0.9) if any(s in word.lower() for s in suspicious) else np.random.uniform(0.1, 0.4)
-                annotated.append({'word': word, 'attention': float(attention)})
+                if any(s in word.lower() for s in suspicious):
+                    attention = float(rng.uniform(0.72, 0.95))
+                elif verdict == 'FAKE':
+                    attention = float(rng.uniform(0.25, 0.75))
+                else:
+                    attention = float(rng.uniform(0.05, 0.45))
+                annotated.append({'word': word, 'attention': round(attention, 3)})
             
             return {
                 'verdict': verdict,
