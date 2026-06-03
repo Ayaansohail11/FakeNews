@@ -1,7 +1,7 @@
 from huggingface_hub import HfApi
 import os
 
-api = HfApi(token="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")
+api = HfApi(token=os.getenv('HF_TOKEN', ''))
 repo_id = "AyaanS123/FakeNewsSpace"
 
 files = [

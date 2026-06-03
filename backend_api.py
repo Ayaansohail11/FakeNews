@@ -10,6 +10,8 @@ import joblib
 import numpy as np
 from preprocess import clean_text, load_tfidf
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend
@@ -149,14 +151,9 @@ def predict_dl():
         avg_fake_prob = float(np.mean(probs)) if probs else 0.5
         is_fake = avg_fake_prob >= 0.5
 
-        # Scale raw ML prob (usually 0.95-1.0) into 90-100% display range
+        # Real confidence from ML ensemble (no fake scaling)
         raw_conf = avg_fake_prob if is_fake else 1.0 - avg_fake_prob
-        # Map [0.5, 1.0] -> [0.90, 0.9999]
-        scaled_conf = 0.90 + (raw_conf - 0.5) * (0.0999 / 0.5)
-        # Add text-based deterministic variation
-        text_hash = sum(ord(c) for c in cleaned[:200])
-        noise = (text_hash % 97) / 10000.0  # 0.0000 to 0.0096
-        confidence = round(min(scaled_conf + noise, 0.9999), 4)
+        confidence = round(raw_conf, 4)
 
         # Attention from TF-IDF scores
         words = cleaned.split()[:50]
@@ -192,32 +189,17 @@ def predict_dl():
 
 @app.route('/api/predict/llm', methods=['POST'])
 def predict_llm():
-    """LLaMA 3.3 70B prediction via Groq API"""
+    """LLaMA 3.3 70B via Groq, fallback to Gemini"""
+    import json, re
+    from dotenv import load_dotenv
+    load_dotenv()
+
     try:
         data = request.json
         text = data.get('text', '')
-        
         if not text:
             return jsonify({'error': 'No text provided'}), 400
-        
-        # Import here to avoid loading if not needed
-        import json
-        import re
-        from dotenv import load_dotenv
-        
-        load_dotenv()
-        GROQ_KEY = os.getenv('GROQ_API_KEY', '')
-        
-        if not GROQ_KEY:
-            return jsonify({'error': 'GROQ_API_KEY not set in environment'}), 500
 
-        try:
-            from groq import Groq
-        except ImportError:
-            return jsonify({'error': 'groq package not installed. Run: pip install groq'}), 500
-        
-        client = Groq(api_key=GROQ_KEY)
-        
         prompt = f"""You are an expert fake news detector. Analyze the writing style, tone, and content of this article.
 
 IMPORTANT: Do NOT judge based on whether you know the facts. Judge based on:
@@ -240,20 +222,49 @@ Provide JSON response with:
 - reasoning: brief explanation
 
 Respond ONLY with valid JSON."""
-        
-        try:
-            resp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=500
-            )
-        except Exception as groq_err:
-            return jsonify({'error': f'Groq API error: {str(groq_err)}'}), 500
-        
-        raw = resp.choices[0].message.content
+
+        raw = None
+        model_used = None
+
+        # Try Groq (LLaMA) first
+        GROQ_KEY = os.getenv('GROQ_API_KEY', '')
+        if GROQ_KEY:
+            try:
+                from groq import Groq
+                client = Groq(api_key=GROQ_KEY)
+                resp = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                    max_tokens=500
+                )
+                raw = resp.choices[0].message.content
+                model_used = 'LLaMA 3.3 70B'
+            except Exception as groq_err:
+                print(f"[LLM] Groq failed: {groq_err}, trying Gemini...")
+
+        # Fallback to Gemini
+        if raw is None:
+            GEMINI_KEY = os.getenv('GOOGLE_GENAI_KEY', '')
+            if not GEMINI_KEY:
+                return jsonify({'error': 'Both GROQ_API_KEY and GOOGLE_GENAI_KEY are missing or failed'}), 500
+            try:
+                import google.generativeai as genai
+                genai.configure(api_key=GEMINI_KEY)
+                # Support both old (0.3.x) and new (0.5.x+) google-generativeai
+                try:
+                    model = genai.GenerativeModel('gemini-2.0-flash')
+                    resp = model.generate_content(prompt)
+                    raw = resp.text
+                except Exception:
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    resp = model.generate_content(prompt)
+                    raw = resp.text
+                model_used = 'Gemini Flash'
+            except Exception as gem_err:
+                return jsonify({'error': f'Both LLM providers failed. Gemini error: {str(gem_err)}'}), 500
+
         match = re.search(r'\{.*\}', raw, re.DOTALL)
-        
         if match:
             try:
                 result = json.loads(match.group())
@@ -269,11 +280,11 @@ Respond ONLY with valid JSON."""
                     'credibility': result.get('source_credibility_score', 0.5),
                     'style': result.get('writing_style_score', 0.5)
                 },
-                'model': 'LLaMA 3.3 70B'
+                'model': model_used
             })
         else:
             return jsonify({'error': 'Could not parse LLM response', 'raw': raw[:300]}), 500
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

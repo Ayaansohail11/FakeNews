@@ -33,6 +33,7 @@ function LLMEnsemble({ inputText, setInputText }) {
           verdict: data.verdict || 'UNCERTAIN',
           confidence: data.confidence || 0.5,
           reasoning: data.reasoning || 'No reasoning provided',
+          model: data.model || 'LLaMA 3.3 70B',
           metrics: {
             factual: data.metrics?.factual || 0.5,
             sensationalism: data.metrics?.sensationalism || 0.5,
@@ -114,7 +115,7 @@ function LLMEnsemble({ inputText, setInputText }) {
           disabled={loading || !inputText}
           className="w-full bg-gradient-to-r from-green-600 to-cyan-600 hover:from-green-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg shadow-green-500/50 text-lg"
         >
-          {loading ? '🦙 Querying LLaMA 3.3 70B...' : '🦙 Analyze with LLaMA 3.3 70B'}
+          {loading ? '🤖 Analyzing with LLM...' : '🦙 Analyze with LLM (LLaMA / Gemini)'}
         </button>
       </div>
 
@@ -126,7 +127,7 @@ function LLMEnsemble({ inputText, setInputText }) {
               <h2 className="text-3xl font-black text-green-400 mb-2">
                 {results.llama.verdict === 'FAKE' ? '⚠️ FAKE NEWS' : results.llama.verdict === 'REAL' ? '✅ REAL NEWS' : '❓ UNCERTAIN'}
               </h2>
-              <p className="text-gray-300 text-lg">LLaMA 3.3 70B Analysis - Confidence: {(results.llama.confidence * 100).toFixed(1)}%</p>
+              <p className="text-gray-300 text-lg">{results.llama.model} Analysis - Confidence: {(results.llama.confidence * 100).toFixed(1)}%</p>
             </div>
           </div>
 
@@ -138,8 +139,8 @@ function LLMEnsemble({ inputText, setInputText }) {
                   🦙
                 </div>
                 <div>
-                  <h3 className="text-green-400 font-bold text-lg">LLaMA 3.3 70B</h3>
-                  <p className="text-xs text-gray-400">via Groq API (Meta AI)</p>
+                  <h3 className="text-green-400 font-bold text-lg">{results.llama.model}</h3>
+                  <p className="text-xs text-gray-400">LLM Analysis</p>
                 </div>
               </div>
 
