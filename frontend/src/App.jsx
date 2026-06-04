@@ -135,10 +135,7 @@ function App() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-cyan-500/30 py-3 text-center text-gray-400 text-xs">
-        <p>Built by Team Logic Lords | Heritage Institute of Technology</p>
-      </footer>
+
     </div>
   )
 }

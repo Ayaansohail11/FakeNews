@@ -590,7 +590,6 @@ st.markdown("""
 <div style='text-align: center; color: #00d9ff; padding: 20px;'>
     <h3>🔍 TruthLens v1.0</h3>
     <p>Multimodal Fake News Detection using Machine Learning and Deep Learning</p>
-    <p><b>Team Logic Lords</b> | Heritage Institute of Technology | 2025-2026</p>
     <p>Ankit Dey • Shivam Kumar • Ritam Ghosh • Preetmondeep Ghosh</p>
 </div>
 """, unsafe_allow_html=True)
